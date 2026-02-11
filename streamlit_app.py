@@ -286,6 +286,20 @@ def page_random():
                 
                 # Small spacing between cards
                 st.write("")
+    
+    # Bottom buttons: Shuffle + Go to Top
+    st.divider()
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button("🎲 Shuffle Again", use_container_width=True, type="primary", key="bottom_shuffle"):
+            st.session_state.random_seed = random.randint(0, 999999)
+            st.rerun()
+    with col3:
+        if st.button("⬆ Go to Top", use_container_width=True, key="random_top"):
+            st.components.v1.html(
+                "<script>window.parent.document.querySelector('section.main').scrollTo({top: 0, behavior: 'smooth'});</script>",
+                height=0
+            )
 
 
 def page_search():
@@ -304,16 +318,35 @@ def page_search():
         st.caption(f"Found {len(results):,} images")
         
         if not results.empty:
+            # Randomize and show up to 100 results
+            display_count = min(100, len(results))
+            
+            # Initialize or update search shuffle seed per query
+            search_seed_key = f"search_seed_{search_query}"
+            if search_seed_key not in st.session_state:
+                st.session_state[search_seed_key] = random.randint(0, 999999)
+            
+            sampled = results.sample(n=display_count, random_state=st.session_state[search_seed_key])
+            
             # Display as grid
             cols = st.columns(4)
-            for idx, (_, row) in enumerate(results.head(20).iterrows()):
+            for idx, (_, row) in enumerate(sampled.iterrows()):
                 with cols[idx % 4]:
                     st.image(row['url'], use_container_width=True)
                     if row.get('prompt'):
                         st.caption(row['prompt'][:50] + "..." if len(str(row['prompt'])) > 50 else row['prompt'])
             
-            if len(results) > 20:
-                st.info(f"Showing first 20 of {len(results):,} results")
+            if len(results) > 100:
+                st.info(f"Showing 100 of {len(results):,} results")
+            
+            # Go to Top button at bottom
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button("⬆ Go to Top", use_container_width=True, key="search_top"):
+                    st.components.v1.html(
+                        "<script>window.parent.document.querySelector('section.main').scrollTo({top: 0, behavior: 'smooth'});</script>",
+                        height=0
+                    )
 
 
 def page_stats():
